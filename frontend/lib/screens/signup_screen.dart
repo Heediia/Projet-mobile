@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -20,15 +21,32 @@ class SignUpScreenState extends State<SignUpScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+    
     try {
-      await Provider.of<AuthProvider>(context, listen: false).signUp(
-        _usernameController.text,
-        _emailController.text,
-        _passwordController.text,
+      // Direct API call (alternative to using AuthProvider)
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:5000/api/signup'), // Use your correct backend URL
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': _usernameController.text,
+          'email': _emailController.text,
+          'password': _passwordController.text,
+        }),
       );
 
       if (!mounted) return;
-      Navigator.pushNamed(context, '/vérifier');
+
+      if (response.statusCode == 201) {
+        Navigator.pushNamed(context, '/vérifier');
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Signup failed');
+      }
+    } on http.ClientException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Network error: ${e.message}')),
+      );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -40,6 +58,7 @@ class SignUpScreenState extends State<SignUpScreen> {
       }
     }
   }
+
 
   @override
   void dispose() {

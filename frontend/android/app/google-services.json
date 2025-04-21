@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "701749616587",
+    "project_id": "ballouchi-23808",
+    "storage_bucket": "ballouchi-23808.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:701749616587:android:2bf75012ed9eaf0a11e04e",
+        "android_client_info": {
+          "package_name": "com.example.frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZSsBavsxmGZteGrSKmRjJHl2jU_sdWXg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:701749616587:android:12f1c69a4a72061611e04e",
+        "android_client_info": {
+          "package_name": "rootProject.layout.buildDirectory"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZSsBavsxmGZteGrSKmRjJHl2jU_sdWXg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

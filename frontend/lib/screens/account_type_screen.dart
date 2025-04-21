@@ -13,7 +13,7 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
   String? _selectedType;
   bool _showOptions = false;
 
-  Future<void> _selectAccountType(BuildContext context, String type) async {
+  Future<void> _selectAccountType(String type) async {
     setState(() {
       _selectedType = type;
     });
@@ -22,14 +22,15 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
       await Provider.of<AuthProvider>(context, listen: false)
           .setAccountType(type);
 
-      if (!context.mounted) return;
+      if (!mounted) return;
 
-      Navigator.pushNamed(
-        context,
-        type == 'commerçant' ? '/merchant-dashboard' : '/client-dashboard',
-      );
+      final routeName = type == 'commerçant' 
+          ? '/merchant-registration' 
+          : '/client-location';
+      
+      Navigator.pushNamed(context, routeName);
     } catch (e) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur : ${e.toString()}')),
       );
@@ -41,7 +42,7 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
 
     return Expanded(
       child: GestureDetector(
-        onTap: () => _selectAccountType(context, type),
+        onTap: () => _selectAccountType(type),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 20),
           decoration: BoxDecoration(
@@ -50,7 +51,7 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
             border: Border.all(color: Colors.green.shade100),
             boxShadow: [
               BoxShadow(
-               color: Colors.grey.withAlpha((0.15 * 255).toInt()),
+                color: Colors.grey.withAlpha((0.15 * 255).toInt()),
                 spreadRadius: 1,
                 blurRadius: 6,
                 offset: const Offset(0, 3),
@@ -68,7 +69,7 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
                   color: isSelected ? Colors.white : Colors.black87,
                   fontWeight: FontWeight.bold,
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -117,7 +118,7 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                     color: Colors.grey.withAlpha((0.1 * 255).toInt()),
+                      color: Colors.grey.withAlpha((0.1 * 255).toInt()),
                       spreadRadius: 2,
                       blurRadius: 8,
                       offset: const Offset(0, 4),

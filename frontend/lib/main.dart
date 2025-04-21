@@ -4,6 +4,8 @@ import 'package:frontend/screens/signup_screen.dart';
 import 'package:frontend/screens/verification_screen.dart';
 import 'package:frontend/screens/account_type_screen.dart';
 import 'package:frontend/providers/auth_provider.dart';
+import 'package:frontend/screens/merchant_registration_screen.dart';
+import 'package:frontend/screens/client_location_screen.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -34,6 +36,10 @@ class MyApp extends StatelessWidget {
         '/signup': (context) => const SignUpScreen(),
         '/verify': (context) => const VerificationScreen(),
         '/account-type': (context) => const AccountTypeScreen(),
+        '/merchant-registration': (context) => const MerchantRegistrationScreen(),
+       '/client-location': (context) => const ClientLocationScreen(),
+
+
       },
       debugShowCheckedModeBanner: false,
     );

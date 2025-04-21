@@ -1,148 +1,61 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
   @override
-  SignInScreenState createState() => SignInScreenState();
+  State<SignInScreen> createState() => _SignInScreenState();
 }
 
-class SignInScreenState extends State<SignInScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _isLoading = false;
+class _SignInScreenState extends State<SignInScreen> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  bool isLoading = false;
 
-  Future<void> _signIn() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> login() async {
+    setState(() {
+      isLoading = true;
+    });
 
-    setState(() => _isLoading = true);
     try {
-      await Provider.of<AuthProvider>(context, listen: false)
-          .signIn(_emailController.text, _passwordController.text);
+      final response = await http.post(
+        Uri.parse('http://localhost:5000/api/login'),
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({
+          'email': emailController.text,
+          'password': passwordController.text,
+        }),
+      );
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
-    } catch (error) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
+
+      setState(() {
+        isLoading = false;
+      });
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Connexion réussie')),
+        );
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data['message'] ?? 'Erreur inconnue')),
+        );
       }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur de connexion')),
+      );
     }
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9), // light background for elegance
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 60), // adds spacing above logo
-            Center(
-              child: Image.asset(
-                'assets/images/ballouchi_logo.png',
-                height: 180,
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(height: 30),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    _buildTextFieldCard(
-                      child: TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: InputBorder.none,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Entrez votre email';
-                          }
-                          if (!value.contains('@')) {
-                            return 'Email invalide';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    _buildTextFieldCard(
-                      child: TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Mot de passe',
-                          border: InputBorder.none,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Entrez votre mot de passe';
-                          }
-                          if (value.length < 6) {
-                            return 'Le mot de passe doit contenir au moins 6 caractères';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _signIn,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: Colors.green.shade200,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 5,
-                        ),
-                        child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
-                                'Connexion',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () => Navigator.pushNamed(context, '/signup'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.green,
-                      ),
-                      child: const Text("Créer un compte"),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildTextFieldCard({required Widget child}) {
@@ -160,6 +73,86 @@ class SignInScreenState extends State<SignInScreen> {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: child,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9F9F9),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const SizedBox(height: 60),
+            Center(
+              child: Image.asset(
+                'assets/images/ballouchi_logo.png',
+                height: 180,
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(height: 30),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                children: [
+                  _buildTextFieldCard(
+                    child: TextFormField(
+                      controller: emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildTextFieldCard(
+                    child: TextFormField(
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Mot de passe',
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isLoading ? null : login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.green.shade200,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 5,
+                      ),
+                      child: isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              'Connexion',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => Navigator.pushNamed(context, '/signup'),  // Changé de '/register' à '/signup'
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.green,
+                    ),
+                 child: const Text("Créer un compte"),
+                ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

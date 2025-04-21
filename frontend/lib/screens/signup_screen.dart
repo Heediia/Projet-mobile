@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -16,42 +15,37 @@ class SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    
+
     try {
-      // Direct API call (alternative to using AuthProvider)
-      final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/signup'), // Use your correct backend URL
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': _usernameController.text,
-          'email': _emailController.text,
-          'password': _passwordController.text,
-        }),
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.signUp(
+        _usernameController.text.trim(),
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
 
       if (!mounted) return;
-
-      if (response.statusCode == 201) {
-        Navigator.pushNamed(context, '/vérifier');
-      } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'Signup failed');
+      Navigator.pushNamed(context, '/verify', arguments: {
+        'email': _emailController.text.trim(),
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().replaceAll('Exception:', '').trim(),
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-    } on http.ClientException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Network error: ${e.message}')),
-      );
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -59,16 +53,13 @@ class SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  Widget _buildTextFieldCard({required Widget child}) {
+  Widget _buildTextFieldCard({
+    required TextEditingController controller,
+    required String labelText,
+    bool obscureText = false,
+    Widget? suffixIcon,
+    String? Function(String?)? validator,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -78,11 +69,20 @@ class SignUpScreenState extends State<SignUpScreen> {
             color: Colors.black12,
             blurRadius: 10,
             offset: Offset(0, 4),
-          ),
+          )
         ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: child,
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscureText,
+        validator: validator,
+        decoration: InputDecoration(
+          labelText: labelText,
+          border: InputBorder.none,
+          suffixIcon: suffixIcon,
+        ),
+      ),
     );
   }
 
@@ -110,7 +110,8 @@ class SignUpScreenState extends State<SignUpScreen> {
                   children: [
                     const Text(
                       "S'inscrire",
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 10),
@@ -121,58 +122,57 @@ class SignUpScreenState extends State<SignUpScreen> {
                     ),
                     const SizedBox(height: 30),
                     _buildTextFieldCard(
-                      child: TextFormField(
-                        controller: _usernameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nom utilisateur',
-                          border: InputBorder.none,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Entrez votre nom utilisateur';
-                          }
-                          return null;
-                        },
-                      ),
+                      controller: _usernameController,
+                      labelText: 'Nom utilisateur',
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Entrez votre nom utilisateur';
+                        }
+                        if (value.length < 3) {
+                          return 'Le nom doit contenir au moins 3 caractères';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 20),
                     _buildTextFieldCard(
-                      child: TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: InputBorder.none,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Entrez votre email';
-                          }
-                          if (!value.contains('@')) {
-                            return 'Entrez un email valide';
-                          }
-                          return null;
-                        },
-                      ),
+                      controller: _emailController,
+                      labelText: 'Email',
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Entrez votre email';
+                        }
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                            .hasMatch(value)) {
+                          return 'Entrez un email valide';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 20),
                     _buildTextFieldCard(
-                      child: TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Mot de passe',
-                          border: InputBorder.none,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Entrez votre mot de passe';
-                          }
-                          if (value.length < 6) {
-                            return 'Le mot de passe doit contenir au moins 6 caractères';
-                          }
-                          return null;
+                      controller: _passwordController,
+                      labelText: 'Mot de passe',
+                      obscureText: _obscurePassword,
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
                         },
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Entrez votre mot de passe';
+                        }
+                        if (value.length < 6) {
+                          return 'Le mot de passe doit contenir au moins 6 caractères';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 30),
                     SizedBox(
@@ -221,5 +221,13 @@ class SignUpScreenState extends State<SignUpScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

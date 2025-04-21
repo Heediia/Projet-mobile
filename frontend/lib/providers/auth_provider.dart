@@ -1,20 +1,30 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:async'; // Import for TimeoutException
+import 'dart:async';
 
 class AuthProvider with ChangeNotifier {
   String? _email;
   String? _token;
+  String? _accountType;
+  String? _address;
+  String? _commerceName;
+  String? _commerceType;
+  String? _phone;
+
   String? get email => _email;
   String? get token => _token;
+  String? get accountType => _accountType;
+  String? get address => _address;
+  String? get commerceName => _commerceName;
+  String? get commerceType => _commerceType;
+  String? get phone => _phone;
 
-  // Get the correct base URL based on platform
   String get _baseUrl {
     if (kIsWeb) {
-      return 'http://localhost:5000'; // For web builds
+      return 'http://localhost:5000';
     } else {
-      return 'http://10.0.2.2:5000'; // For mobile (Android/iOS)
+      return 'http://10.0.2.2:5000';
     }
   }
 
@@ -36,14 +46,39 @@ class AuthProvider with ChangeNotifier {
         _email = email;
         notifyListeners();
       } else {
-        throw HttpException(responseData['message'] ?? 'Unknown error during signup');
+        throw HttpException(responseData['message'] ?? 'Erreur inconnue lors de l\'inscription');
       }
     } on TimeoutException catch (_) {
-      throw HttpException('Request timed out');
+      throw HttpException('La requête a expiré');
     } on http.ClientException catch (e) {
-      throw HttpException('Network error: ${e.message}');
+      throw HttpException('Erreur réseau: ${e.message}');
     } catch (e) {
-      throw HttpException('Failed to sign up: ${e.toString()}');
+      throw HttpException('Échec de l\'inscription: ${e.toString()}');
+    }
+  }
+
+  Future<void> sendVerificationCode(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/send-code'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email}),
+      ).timeout(const Duration(seconds: 10));
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        _email = email;
+        notifyListeners();
+      } else {
+        throw HttpException(responseData['message'] ?? 'Échec de l\'envoi du code');
+      }
+    } on TimeoutException catch (_) {
+      throw HttpException('La requête a expiré');
+    } on http.ClientException catch (e) {
+      throw HttpException('Erreur réseau: ${e.message}');
+    } catch (e) {
+      throw HttpException('Erreur d\'envoi du code: ${e.toString()}');
     }
   }
 
@@ -56,26 +91,26 @@ class AuthProvider with ChangeNotifier {
           'email': _email,
           'code': code,
         }),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 1000000));
 
       final responseData = json.decode(response.body);
       
       if (response.statusCode != 200) {
-        throw HttpException(responseData['message'] ?? 'Verification failed');
+        throw HttpException(responseData['message'] ?? 'Échec de la vérification');
       }
     } on TimeoutException catch (_) {
-      throw HttpException('Request timed out');
+      throw HttpException('La requête a expiré');
     } on http.ClientException catch (e) {
-      throw HttpException('Network error: ${e.message}');
+      throw HttpException('Erreur réseau: ${e.message}');
     } catch (e) {
-      throw HttpException('Verification error: ${e.toString()}');
+      throw HttpException('Erreur de vérification: ${e.toString()}');
     }
   }
 
   Future<void> setAccountType(String accountType) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/api/set-account-type'),
+        Uri.parse('$_baseUrl/api/account-type'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': _email,
@@ -85,15 +120,87 @@ class AuthProvider with ChangeNotifier {
 
       final responseData = json.decode(response.body);
       
-      if (response.statusCode != 200) {
-        throw HttpException(responseData['message'] ?? 'Failed to set account type');
+      if (response.statusCode == 200) {
+        _accountType = accountType;
+        notifyListeners();
+      } else {
+        throw HttpException(responseData['message'] ?? 'Échec de la définition du type de compte');
       }
     } on TimeoutException catch (_) {
-      throw HttpException('Request timed out');
+      throw HttpException('La requête a expiré');
     } on http.ClientException catch (e) {
-      throw HttpException('Network error: ${e.message}');
+      throw HttpException('Erreur réseau: ${e.message}');
     } catch (e) {
-      throw HttpException('Account type error: ${e.toString()}');
+      throw HttpException('Erreur de type de compte: ${e.toString()}');
+    }
+  }
+
+  Future<void> setClientLocation({
+    required String address,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/set-client-location'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': _email,
+          'address': address,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      final responseData = json.decode(response.body);
+      
+      if (response.statusCode == 200) {
+        _address = address;
+        notifyListeners();
+      } else {
+        throw HttpException(responseData['message'] ?? 'Échec de la définition de la localisation');
+      }
+    } on TimeoutException catch (_) {
+      throw HttpException('La requête a expiré');
+    } on http.ClientException catch (e) {
+      throw HttpException('Erreur réseau: ${e.message}');
+    } catch (e) {
+      throw HttpException('Erreur de localisation: ${e.toString()}');
+    }
+  }
+
+  Future<void> completeMerchantRegistration({
+    required String commerceName,
+    required String commerceType,
+    required String address,
+    required String phone,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/complete-merchant-registration'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': _email,
+          'commerceName': commerceName,
+          'commerceType': commerceType,
+          'address': address,
+          'phone': phone,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      final responseData = json.decode(response.body);
+      
+      if (response.statusCode == 200) {
+        _commerceName = commerceName;
+        _commerceType = commerceType;
+        _address = address;
+        _phone = phone;
+        notifyListeners();
+      } else {
+        throw HttpException(responseData['message'] ?? 'Échec de l\'enregistrement du commerçant');
+      }
+    } on TimeoutException catch (_) {
+      throw HttpException('La requête a expiré');
+    } on http.ClientException catch (e) {
+      throw HttpException('Erreur réseau: ${e.message}');
+    } catch (e) {
+      throw HttpException('Erreur d\'enregistrement du commerçant: ${e.toString()}');
     }
   }
 
@@ -113,22 +220,28 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         _email = email;
         _token = responseData['token'];
+        _accountType = responseData['accountType'];
         notifyListeners();
       } else {
-        throw HttpException(responseData['message'] ?? 'Login failed');
+        throw HttpException(responseData['message'] ?? 'Échec de la connexion');
       }
     } on TimeoutException catch (_) {
-      throw HttpException('Request timed out');
+      throw HttpException('La requête a expiré');
     } on http.ClientException catch (e) {
-      throw HttpException('Network error: ${e.message}');
+      throw HttpException('Erreur réseau: ${e.message}');
     } catch (e) {
-      throw HttpException('Login error: ${e.toString()}');
+      throw HttpException('Erreur de connexion: ${e.toString()}');
     }
   }
 
   void logout() {
     _email = null;
     _token = null;
+    _accountType = null;
+    _address = null;
+    _commerceName = null;
+    _commerceType = null;
+    _phone = null;
     notifyListeners();
   }
 }

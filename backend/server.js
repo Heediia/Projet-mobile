@@ -6,6 +6,12 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const app = express();
+const multer = require('multer');
+
+
+// Configuration de stockage
+const storage = multer.memoryStorage(); // ou diskStorage si tu veux enregistrer les fichiers localement
+const upload = multer({ storage: storage });
 
 // Middleware
 app.use(express.json());
@@ -17,7 +23,7 @@ app.use(cors({
 
 // Firebase Admin SDK Initialization
 try {
-  const serviceAccount = require('./ballouchi-23808-firebase-adminsdk-fbsvc-d595c6c2df.json');
+  const serviceAccount = require('./ballouchi-23808-firebase-adminsdk-fbsvc-6b778e9a66.json');
   
   admin.initializeApp({
     credential: admin.credential.cert({
@@ -26,8 +32,8 @@ try {
       privateKey: serviceAccount.private_key.replace(/\\n/g, '\n'),
     }),
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: 'https://<ballouchi-23808>.firebaseio.com',
-    storageBucket: '<ballouchi-23808>.appspot.com'
+    databaseURL: 'https://ballouchi-23808.firebaseio.com',
+    storageBucket: 'ballouchi-23808.appspot.com'
   });
 
   console.log("Firebase Admin initialized successfully");
@@ -77,72 +83,195 @@ app.get('/api/test-firebase', async (req, res) => {
   }
 });
 
-// Signup endpoint
+// Ajoutez cette map pour gérer les codes temporairement
+const verificationCodes = new Map();
+
+// Modifiez le endpoint /api/signup
 app.post('/api/signup', async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    console.log("Signup request received:", { username, email });
+    
+    // Vérification des champs requis
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: 'Tous les champs sont requis' });
+    }
 
+    // Vérification de l'email existant
     const userRef = db.collection('users').doc(email);
     const userDoc = await userRef.get();
-
+    
     if (userDoc.exists) {
-      return res.status(400).json({ message: 'Email already in use' });
+      return res.status(400).json({ message: 'Email déjà utilisé' });
     }
 
-    let firebaseUser;
-    try {
-      firebaseUser = await auth.createUser({
-        email: email,
-        displayName: username,
-        password: password,
-      });
-    } catch (authError) {
-      console.error('Firebase Auth error:', authError);
-      return res.status(400).json({ message: 'User creation failed', error: authError.message });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const verificationCode = generateVerificationCode();
-    const verificationCodeExpires = admin.firestore.FieldValue.serverTimestamp();
-
-    await userRef.set({
-      uid: firebaseUser.uid,
-      username,
+    // Création de l'utilisateur Firebase
+    const firebaseUser = await auth.createUser({
       email,
-      password: hashedPassword,
-      isVerified: false,
-      verificationCode,
-      verificationCodeExpires,
-      accountType: 'client',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      password,
+      displayName: username
     });
 
+    // Génération du code de vérification
+    const verificationCode = generateVerificationCode();
+    const verificationCodeExpires = Date.now() + 900000; // 15 minutes
+
+    // Stockage temporaire
+    verificationCodes.set(email, {
+      code: verificationCode,
+      expires: verificationCodeExpires
+    });
+
+    // Envoi du code par email
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: 'Verify Your Email',
+      subject: 'Code de Vérification Ballouchi',
       html: `
-        <h2>Welcome to Ballouchi!</h2>
-        <p>Your verification code is: <strong>${verificationCode}</strong></p>
-        <p>Enter this code in the app to verify your email address.</p>
-      `,
+        <h2>Bienvenue sur Ballouchi!</h2>
+        <p>Votre code de vérification est : <strong>${verificationCode}</strong></p>
+        <p>Ce code expirera dans 15 minutes.</p>
+      `
     };
 
     await transporter.sendMail(mailOptions);
-    console.log("Verification email sent to", email);
 
-    res.status(201).json({ 
-      message: 'User registered successfully! Please check your email for verification.',
-      userId: firebaseUser.uid,
+    res.status(201).json({
+      message: 'Code de vérification envoyé avec succès',
+      email
     });
 
   } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({ 
-      message: 'Registration failed',
-      error: error.message,
+    console.error('Erreur d\'inscription:', error);
+    res.status(500).json({
+      message: 'Erreur du serveur',
+      error: error.message
     });
+  }
+});
+
+// Ajoutez ce endpoint pour le renvoi de code
+app.post('/api/resend-code', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!verificationCodes.has(email)) {
+      return res.status(404).json({ message: 'Aucun code actif pour cet email' });
+    }
+
+    // Générer un nouveau code
+    const newCode = generateVerificationCode();
+    const newExpiration = Date.now() + 900000; // 15 minutes
+    
+    verificationCodes.set(email, {
+      code: newCode,
+      expires: newExpiration
+    });
+
+    // Renvoyer le code par email
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Nouveau Code de Vérification',
+      html: `
+        <h2>Nouveau code Ballouchi</h2>
+        <p>Votre nouveau code est : <strong>${newCode}</strong></p>
+        <p>Ce code expirera dans 15 minutes.</p>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: 'Nouveau code envoyé avec succès' });
+
+  } catch (error) {
+    res.status(500).json({
+      message: 'Erreur de renvoi',
+      error: error.message
+    });
+  }
+});
+
+// Modifiez le endpoint de vérification
+app.post('/api/verify', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    const record = verificationCodes.get(email);
+
+    if (!record) {
+      return res.status(400).json({ message: 'Aucun code associé à cet email' });
+    }
+
+    if (record.code !== code) {
+      return res.status(400).json({ message: 'Code de vérification incorrect' });
+    }
+
+    if (Date.now() > record.expires) {
+      verificationCodes.delete(email);
+      return res.status(400).json({ message: 'Code expiré' });
+    }
+
+    // Création de l'utilisateur dans Firestore
+    const userRef = db.collection('users').doc(email);
+    await userRef.set({
+      email,
+      isVerified: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Suppression du code temporaire
+    verificationCodes.delete(email);
+
+    res.status(200).json({ 
+      message: 'Vérification réussie',
+      verified: true 
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: 'Erreur de vérification',
+      error: error.message
+    });
+  }
+});
+app.post('/api/merchant/register', upload.fields([
+  { name: 'logo', maxCount: 1 },
+  { name: 'images', maxCount: 5 }
+]), async (req, res) => {
+  try {
+    const { commerceName, commerceType, address, phone } = req.body;
+    const files = req.files;
+    const uploads = {};
+
+    // Upload files
+    for (const key in files) {
+      const file = files[key][0];
+      const filename = `${uuidv4()}_${file.originalname}`;
+      const fileUpload = bucket.file(filename);
+
+      await fileUpload.save(file.buffer, {
+        metadata: {
+          contentType: file.mimetype,
+        },
+      });
+
+      uploads[key] = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+    }
+
+    await db.collection('merchants').add({
+      commerceName,
+      commerceType,
+      address,
+      phone,
+      logoUrl: uploads.logo || null,
+      storeImageUrl: uploads.storeImage || null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.status(200).send({ message: 'Merchant enregistré avec succès' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: error.message });
   }
 });
 
@@ -223,13 +352,53 @@ app.post('/api/verify', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+// Ajoutez cette route avant les autres endpoints
+app.post('/api/resend-code', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    // Vérifier si l'email existe dans la base de données
+    const userRef = db.collection('users').doc(email);
+    const userDoc = await userRef.get();
+    
+    if (!userDoc.exists) {
+      return res.status(404).json({ message: 'Email non enregistré' });
+    }
+
+    // Générer un nouveau code
+    const newCode = generateVerificationCode();
+    const newExpires = Date.now() + 900000; // 15 minutes
+
+    // Mettre à jour dans Firestore
+    await userRef.update({
+      verificationCode: newCode,
+      verificationCodeExpires: newExpires
+    });
+
+    // Envoyer le nouvel email
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Nouveau Code de Vérification',
+      html: `<p>Votre nouveau code est : <strong>${newCode}</strong></p>`
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: 'Code renvoyé avec succès' });
+
+  } catch (error) {
+    console.error('Resend error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // Account type update endpoint
 app.post('/api/account-type', async (req, res) => {
   try {
     const { email, accountType } = req.body;
 
-    if (!['client', 'professional'].includes(accountType)) {
+    if (!['client', 'commerçant'].includes(accountType)) {
       return res.status(400).json({ message: 'Invalid account type' });
     }
 

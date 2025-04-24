@@ -41,7 +41,7 @@ class AuthProvider with ChangeNotifier {
       ).timeout(const Duration(seconds: 10));
 
       final responseData = json.decode(response.body);
-      
+
       if (response.statusCode == 201) {
         _email = email;
         notifyListeners();
@@ -94,7 +94,7 @@ class AuthProvider with ChangeNotifier {
       ).timeout(const Duration(seconds: 1000000));
 
       final responseData = json.decode(response.body);
-      
+
       if (response.statusCode != 200) {
         throw HttpException(responseData['message'] ?? 'Échec de la vérification');
       }
@@ -106,6 +106,24 @@ class AuthProvider with ChangeNotifier {
       throw HttpException('Erreur de vérification: ${e.toString()}');
     }
   }
+   Future<void> resendVerificationCode() async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/resend-code'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': _email}),
+      );
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode != 200) {
+        throw HttpException(responseData['message'] ?? 'Échec du renvoi');
+      }
+    } catch (e) {
+      throw HttpException('Erreur de renvoi: ${e.toString()}');
+    }
+  }
+
 
   Future<void> setAccountType(String accountType) async {
     try {
@@ -119,7 +137,7 @@ class AuthProvider with ChangeNotifier {
       ).timeout(const Duration(seconds: 10));
 
       final responseData = json.decode(response.body);
-      
+
       if (response.statusCode == 200) {
         _accountType = accountType;
         notifyListeners();
@@ -149,7 +167,7 @@ class AuthProvider with ChangeNotifier {
       ).timeout(const Duration(seconds: 10));
 
       final responseData = json.decode(response.body);
-      
+
       if (response.statusCode == 200) {
         _address = address;
         notifyListeners();
@@ -165,6 +183,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+ 
   Future<void> completeMerchantRegistration({
     required String commerceName,
     required String commerceType,
@@ -185,7 +204,7 @@ class AuthProvider with ChangeNotifier {
       ).timeout(const Duration(seconds: 10));
 
       final responseData = json.decode(response.body);
-      
+
       if (response.statusCode == 200) {
         _commerceName = commerceName;
         _commerceType = commerceType;
@@ -216,7 +235,7 @@ class AuthProvider with ChangeNotifier {
       ).timeout(const Duration(seconds: 10));
 
       final responseData = json.decode(response.body);
-      
+
       if (response.statusCode == 200) {
         _email = email;
         _token = responseData['token'];
@@ -244,12 +263,55 @@ class AuthProvider with ChangeNotifier {
     _phone = null;
     notifyListeners();
   }
+
+  // Ajouts
+
+  bool get isAuthenticated {
+    return _token != null;
+  }
+
+  Future<void> fetchUserProfile() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/user-profile?email=$_email'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        _accountType = responseData['accountType'];
+        _address = responseData['address'];
+        _commerceName = responseData['commerceName'];
+        _commerceType = responseData['commerceType'];
+        _phone = responseData['phone'];
+        notifyListeners();
+      } else {
+        throw HttpException(responseData['message'] ?? 'Échec du chargement du profil');
+      }
+    } catch (e) {
+      throw HttpException('Erreur lors du chargement du profil: ${e.toString()}');
+    }
+  }
+
+  void setToken(String token) {
+    _token = token;
+    notifyListeners();
+  }
+
+  void setEmail(String email) {
+    _email = email;
+    notifyListeners();
+  }
 }
 
 class HttpException implements Exception {
   final String message;
   HttpException(this.message);
-  
+
   @override
   String toString() => message;
 }

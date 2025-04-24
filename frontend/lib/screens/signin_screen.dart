@@ -92,6 +92,17 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
             ),
             const SizedBox(height: 30),
+            const Center(
+              child: Text(
+                'Se connecter',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
@@ -140,13 +151,13 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/signup'),  // Changé de '/register' à '/signup'
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.green,
+                  TextButton(
+                    onPressed: () => Navigator.pushNamed(context, '/signup'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.green,
                     ),
-                 child: const Text("Créer un compte"),
-                ),
+                    child: const Text("Créer un compte"),
+                  ),
                 ],
               ),
             ),

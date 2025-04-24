@@ -13,24 +13,56 @@ class VerificationScreen extends StatefulWidget {
 class VerificationScreenState extends State<VerificationScreen> {
   final _codeController = TextEditingController();
   bool _isLoading = false;
+  bool _isResending = false;
 
   Future<void> _verifyCode() async {
+    if (!mounted) return;
+
+    if (_codeController.text.length != 4) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter 4-digit code')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
+    
     try {
-      await Provider.of<AuthProvider>(context, listen: false)
-          .verifyCode(_codeController.text);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.verifyCode(_codeController.text);
 
       if (!mounted) return;
-      Navigator.pushNamed(context, '/account-type');
+      Navigator.of(context).pushNamed('/account-type');
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.toString())),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _resendCode() async {
+    if (!mounted) return;
+
+    setState(() => _isResending = true);
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.resendVerificationCode();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('New code sent!')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isResending = false);
     }
   }
 
@@ -92,13 +124,13 @@ class VerificationScreenState extends State<VerificationScreen> {
             ),
             const SizedBox(height: 10),
             TextButton(
-              onPressed: () {
-                // Logic to resend code
-              },
-              child: const Text(
-                'Renvoyer le code',
-                style: TextStyle(color: Colors.green),
-              ),
+              onPressed: _isResending ? null : _resendCode,
+              child: _isResending
+                  ? const CircularProgressIndicator()
+                  : const Text(
+                      'Renvoyer le code',
+                      style: TextStyle(color: Colors.green),
+                    ),
             ),
             const SizedBox(height: 30),
             _isLoading

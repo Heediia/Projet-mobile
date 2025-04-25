@@ -28,11 +28,11 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        color: const Color.fromARGB(255, 153, 123, 99), // Marron carton
+        color: const Color.fromARGB(255, 176, 145, 118), // Marron carton
         child: Center(
           child: Image.asset(
             'assets/images/BALLOUCHI.png',
-            height: 300, // Taille du logo
+            height: 340, // Taille du logo
             fit: BoxFit.contain,
           ),
         ),

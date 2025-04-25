@@ -9,6 +9,7 @@ import 'package:frontend/screens/client_location_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend/screens/splash_screen.dart';
 import 'package:frontend/screens/welcome_screen.dart';
+
 void main() {
   runApp(
     MultiProvider(
@@ -41,6 +42,7 @@ class MyApp extends StatelessWidget {
         '/account-type': (context) => const AccountTypeScreen(),
         '/merchant-registration': (context) => const MerchantRegistrationScreen(),
        '/client-location': (context) => const ClientLocationScreen(),
+       
        
 
 

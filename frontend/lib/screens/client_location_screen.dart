@@ -12,16 +12,20 @@ class ClientLocationScreen extends StatefulWidget {
 class _ClientLocationScreenState extends State<ClientLocationScreen> {
   final _addressController = TextEditingController();
   final _locationController = TextEditingController();
+  final _phoneController = TextEditingController();
 
   @override
   void dispose() {
     _addressController.dispose();
     _locationController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
   Future<void> _submitLocation() async {
-    if (_locationController.text.isEmpty || _addressController.text.isEmpty) {
+    if (_locationController.text.isEmpty ||
+        _addressController.text.isEmpty ||
+        _phoneController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Veuillez compléter tous les champs'),
@@ -34,6 +38,7 @@ class _ClientLocationScreenState extends State<ClientLocationScreen> {
     try {
       await Provider.of<AuthProvider>(context, listen: false).setClientLocation(
         address: '${_locationController.text}, ${_addressController.text}',
+        phone: _phoneController.text,
       );
 
       if (!mounted) return;
@@ -96,6 +101,18 @@ class _ClientLocationScreenState extends State<ClientLocationScreen> {
                         labelText: 'Adresse détaillée',
                         border: InputBorder.none,
                         prefixIcon: Icon(Icons.home, color: Colors.green),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildTextFieldCard(
+                    child: TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'téléphone',
+                        border: InputBorder.none,
+                        prefixIcon: Icon(Icons.phone, color: Colors.green),
                       ),
                     ),
                   ),

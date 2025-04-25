@@ -1,96 +1,52 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import '../providers/auth_provider.dart';
 
-class MerchantRegistrationScreen extends StatefulWidget {
-  const MerchantRegistrationScreen({super.key});
+class MerchantProductScreen extends StatefulWidget {
+  const MerchantProductScreen({super.key});
 
   @override
-  State<MerchantRegistrationScreen> createState() => _MerchantRegistrationScreenState();
+  State<MerchantProductScreen> createState() => _MerchantProductScreenState();
 }
 
-class _MerchantRegistrationScreenState extends State<MerchantRegistrationScreen> {
+class _MerchantProductScreenState extends State<MerchantProductScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _commerceNameController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _phoneController = TextEditingController();
-  XFile? _logoImage;
-  XFile? _storeImage;
+  final _productNameController = TextEditingController();
+  final _productDescriptionController = TextEditingController();
+  final _productPriceController = TextEditingController();
+  XFile? _productImage;
 
-  String? _selectedCommerceType;
-
-  final List<String> _commerceTypes = [
-    'Pâtisserie',
-    'Boucherie',
-    'Fromagerie',
-    'Poissonnerie',
-    'Crémerie',
-    'Primeur',
-    'Chocolaterie',
-    'Marché',
-    'Superette',
-    'Hôtel',
-    'Restaurant',
-  ];
-
-  Future<void> _pickImage(bool isLogo) async {
+  Future<void> _pickProductImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
-        if (isLogo) {
-          _logoImage = pickedFile;
-        } else {
-          _storeImage = pickedFile;
-        }
+        _productImage = pickedFile;
       });
     }
   }
 
-  @override
-  void dispose() {
-    _commerceNameController.dispose();
-    _addressController.dispose();
-    _phoneController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submitForm() async {
+  Future<void> _submitProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_storeImage == null) {
+    if (_productImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Veuillez ajouter une image de la devanture'),
+          content: Text('Veuillez ajouter une image du produit'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    if (!mounted) return;
+    // Implémentez ici la logique pour envoyer les données au backend (produit, image, etc.)
+    // Exemple : await uploadProductToBackend(_productNameController.text, _productDescriptionController.text, _productPriceController.text, _productImage);
 
-    try {
-      await Provider.of<AuthProvider>(context, listen: false).completeMerchantRegistration(
-        commerceName: _commerceNameController.text,
-        commerceType: _selectedCommerceType ?? '',
-        address: _addressController.text,
-        phone: _phoneController.text,
-      );
-
-      if (!mounted) return;
-      // Redirection vers la page de gestion des produits après la soumission réussie
-      Navigator.pushReplacementNamed(context, '/merchant-product'); // Changer '/merchant-product' selon la route que vous définissez dans le routeur
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Produit ajouté avec succès'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   Widget _buildTextFieldCard({required Widget child}) {
@@ -208,7 +164,7 @@ class _MerchantRegistrationScreenState extends State<MerchantRegistrationScreen>
               child: Column(
                 children: [
                   Text(
-                    'Informations du commerce',
+                    'Ajouter un produit',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -220,89 +176,59 @@ class _MerchantRegistrationScreenState extends State<MerchantRegistrationScreen>
                     key: _formKey,
                     child: Column(
                       children: [
+                        _buildTextFieldCard(
+                          child: TextFormField(
+                            controller: _productNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Nom du produit',
+                              border: InputBorder.none,
+                              prefixIcon: Icon(Icons.label, color: Colors.green),
+                            ),
+                            validator: (value) => value?.isEmpty ?? true
+                                ? 'Veuillez entrer le nom du produit'
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        _buildTextFieldCard(
+                          child: TextFormField(
+                            controller: _productDescriptionController,
+                            decoration: const InputDecoration(
+                              labelText: 'Description du produit',
+                              border: InputBorder.none,
+                              prefixIcon: Icon(Icons.description, color: Colors.green),
+                            ),
+                            validator: (value) => value?.isEmpty ?? true
+                                ? 'Veuillez entrer une description'
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        _buildTextFieldCard(
+                          child: TextFormField(
+                            controller: _productPriceController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Prix',
+                              border: InputBorder.none,
+                              prefixIcon: Icon(Icons.attach_money, color: Colors.green),
+                            ),
+                            validator: (value) => value?.isEmpty ?? true
+                                ? 'Veuillez entrer le prix'
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
                         _buildImageUploadCard(
-                          image: _logoImage,
-                          label: 'Logo du commerce',
-                          onTap: () => _pickImage(true),
-                        ),
-                        const SizedBox(height: 20),
-                        _buildTextFieldCard(
-                          child: TextFormField(
-                            controller: _commerceNameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Nom du commerce',
-                              border: InputBorder.none,
-                              prefixIcon: Icon(Icons.store, color: Colors.green),
-                            ),
-                            validator: (value) => value?.isEmpty ?? true
-                                ? 'Veuillez entrer le nom'
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        _buildTextFieldCard(
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedCommerceType,
-                            decoration: const InputDecoration(
-                              labelText: 'Type de commerce',
-                              border: InputBorder.none,
-                              prefixIcon: Icon(Icons.category, color: Colors.green),
-                            ),
-                            items: _commerceTypes.map((type) {
-                              return DropdownMenuItem<String>(
-                                value: type,
-                                child: Text(type),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedCommerceType = value;
-                              });
-                            },
-                            validator: (value) =>
-                                value == null || value.isEmpty ? 'Veuillez choisir un type' : null,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        _buildImageUploadCard(
-                          image: _storeImage,
-                          label: 'Image de la devanture',
-                          onTap: () => _pickImage(false),
-                        ),
-                        const SizedBox(height: 20),
-                        _buildTextFieldCard(
-                          child: TextFormField(
-                            controller: _addressController,
-                            decoration: const InputDecoration(
-                              labelText: 'Adresse',
-                              border: InputBorder.none,
-                              prefixIcon: Icon(Icons.location_on, color: Colors.green),
-                            ),
-                            validator: (value) => value?.isEmpty ?? true
-                                ? 'Veuillez entrer l\'adresse'
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        _buildTextFieldCard(
-                          child: TextFormField(
-                            controller: _phoneController,
-                            keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(
-                              labelText: 'Téléphone',
-                              border: InputBorder.none,
-                              prefixIcon: Icon(Icons.phone, color: Colors.green),
-                            ),
-                            validator: (value) => value?.isEmpty ?? true
-                                ? 'Veuillez entrer le téléphone'
-                                : null,
-                          ),
+                          image: _productImage,
+                          label: 'Image du produit',
+                          onTap: _pickProductImage,
                         ),
                         const SizedBox(height: 30),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _submitForm,
+                            onPressed: _submitProduct,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                               foregroundColor: Colors.white,
@@ -313,7 +239,7 @@ class _MerchantRegistrationScreenState extends State<MerchantRegistrationScreen>
                               elevation: 5,
                             ),
                             child: const Text(
-                              'Valider',
+                              'Ajouter le produit',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

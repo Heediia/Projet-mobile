@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart'; 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -91,7 +91,7 @@ class AuthProvider with ChangeNotifier {
           'email': _email,
           'code': code,
         }),
-      ).timeout(const Duration(seconds: 1000000));
+      ).timeout(const Duration(seconds: 1000000)); // Ne pas toucher ici selon ta demande
 
       final responseData = json.decode(response.body);
 
@@ -106,7 +106,8 @@ class AuthProvider with ChangeNotifier {
       throw HttpException('Erreur de vérification: ${e.toString()}');
     }
   }
-   Future<void> resendVerificationCode() async {
+
+  Future<void> resendVerificationCode() async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/api/resend-code'),
@@ -123,7 +124,6 @@ class AuthProvider with ChangeNotifier {
       throw HttpException('Erreur de renvoi: ${e.toString()}');
     }
   }
-
 
   Future<void> setAccountType(String accountType) async {
     try {
@@ -155,6 +155,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> setClientLocation({
     required String address,
+    required String phone,
   }) async {
     try {
       final response = await http.post(
@@ -163,6 +164,7 @@ class AuthProvider with ChangeNotifier {
         body: json.encode({
           'email': _email,
           'address': address,
+          'phone': phone, // Ajouté ici
         }),
       ).timeout(const Duration(seconds: 10));
 
@@ -170,6 +172,7 @@ class AuthProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         _address = address;
+        _phone = phone; // Ajouté ici
         notifyListeners();
       } else {
         throw HttpException(responseData['message'] ?? 'Échec de la définition de la localisation');
@@ -183,7 +186,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
- 
   Future<void> completeMerchantRegistration({
     required String commerceName,
     required String commerceType,
@@ -273,7 +275,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> fetchUserProfile() async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/api/user-profile?email=$_email'),
+         Uri.parse('http://localhost:5000/api/merchant/register'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $_token',

@@ -9,7 +9,6 @@ class WelcomeScreen extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: Stack(
-          alignment: Alignment.center,
           children: [
             // Image de fond
             Container(
@@ -23,31 +22,21 @@ class WelcomeScreen extends StatelessWidget {
               ),
             ),
 
-            // Contenu au centre
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  'assets/images/B1.png',
-                  height: 260,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(height: 40),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 30.0),
-                  child: Text(
-                    'Sauvez des paniers, réduisez le gaspillage, faites des économies.',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
+            // Centrage de l'image B1.png
+          Column(
+  children: [
+    const SizedBox(height: 30), // espace en haut
+    // Logo centré horizontalement
+    Center(
+      child: Image.asset(
+        'assets/images/B1.png',
+        height: 180,
+        fit: BoxFit.contain,
+      ),
+    ),
+    const SizedBox(height: 20),
+  ],
+),
 
             // Bouton "Commencez!"
             Positioned(
